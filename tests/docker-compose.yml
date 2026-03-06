@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+#
+# Include the OTEL stack (Prometheus, Grafana, OTEL Collector)
+# MOSAIC_PATH should be path to the mosaic repo
+include:
+  - ../deployments/docker-compose-vllm.yml
+
+services:
+
+  production-test-framework:
+    profiles: ["test"]
+    image: openmosaic/production-test-framework:latest
+    container_name: production-test-framework
+    environment:
+      - MOSAIC_PATH=${MOSAIC_PATH}
+      - RUN_MAKE_TARGET=profiler-otel-test-only
+      - PYTEST_ARGS="--junitxml=/app/results/test_results.xml"
+    network_mode: "host"
+    volumes:
+      - ./suites:/app/tests:ro
+      - test-results:/app/results
+    depends_on:
+      - mosaic-vllm
+      - otel-lgtm
+    restart: "no"
+
+volumes:
+  test-results:
+    driver: local

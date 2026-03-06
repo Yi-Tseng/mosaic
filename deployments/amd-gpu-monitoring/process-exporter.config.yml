@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+process_names:
+  # - name: "{{.Comm}}"
+  #   cmdline:
+  #   - '.+'
+  - name: "rccl-tests"
+    exe:
+    - 'all_gather_perf'
+    - 'all_reduce_bias_perf'
+    - 'all_reduce_perf'
+    - 'alltoall_perf'
+    - 'alltoallv_perf'
+    - 'broadcast_perf'
+    - 'gather_perf'
+    - 'hypercube_perf'
+    - 'reduce_perf'
+    - 'reduce_scatter_perf'
+    - 'scatter_perf'
+    - 'sendrecv_perf'
+  - name: "ray"
+    cmdline:
+    - 'ray::.*'

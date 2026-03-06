@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+services:
+  amd-device-exporter:
+    image: rocm/device-metrics-exporter:v1.4.0
+    container_name: mosaic-amd-device-exporter
+    profiles:
+      - amd-device-exporter
+    ports:
+      - "5053:5000"
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    restart: unless-stopped
+
+  gpu-pcie-exporter:
+    # Uncommit it to build the image locally
+    # build:
+    #   context: ../gpu_pcie_exporter
+    #   dockerfile: Dockerfile
+    image: openmosaic/gpu-pcie-exporter:latest
+    container_name: mosaic-gpu-pcie-exporter
+    ports:
+      - "5052:8000"
+    # GPU device access (required for rocm-smi to detect GPUs)
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    # Mount host directories for nvidia-smi and rocm-smi access
+    # This allows the container to access GPU management tools from the host
+    # Note: We mount /opt/rocm for rocm-smi, but avoid mounting /usr/bin or /usr/lib
+    # as that would override the container's Python installation
+    volumes:
+      # ROCm tools and libraries (if available) - this provides rocm-smi
+      - /opt/rocm:/opt/rocm:ro
+    # Add host paths to PATH and library paths
+    # Note: Keep container's /usr/local/bin first to preserve container Python and site-packages
+    environment:
+      - PATH=/usr/local/bin:/opt/rocm/bin:/usr/bin:/usr/sbin:/bin:/sbin
+      - LD_LIBRARY_PATH=/opt/rocm/lib:/usr/lib:/usr/local/lib
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mosaic-node-exporter
+    profiles:
+      - node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|run|snapd|var/snap|snap)($|/)'
+    restart: unless-stopped
+
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    container_name: mosaic-process-exporter
+    command:
+      - -config.path=/etc/process-exporter/config.yml
+      - -procfs=/host/proc
+    volumes:
+      - /proc:/host/proc:ro
+      - ./process-exporter.config.yml:/etc/process-exporter/config.yml:ro
+    profiles:
+      - process-exporter
+    ports:
+      - "9256:9256"
+    restart: unless-stopped

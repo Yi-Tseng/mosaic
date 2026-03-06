@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+version = 1
+
+# Annotations for files that cannot have embedded license headers
+[[annotations]]
+path = [
+    "docs/docs/images/*.png",
+    "deployments/dashboards/*.json",
+    ".github/ISSUE_TEMPLATE/*.md",
+    ".github/PULL_REQUEST_TEMPLATE.md"
+]
+SPDX-FileCopyrightText = "2025 Delos Data Inc"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "override"

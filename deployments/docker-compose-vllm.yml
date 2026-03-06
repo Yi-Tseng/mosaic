@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+include:
+  - ./docker-compose.yml
+
+services:
+  mosaic-vllm:
+    build:
+      context: .
+      dockerfile: ../profiler/Dockerfile
+    image: openmosaic/mosaic-vllm:latest
+    container_name: mosaic-vllm
+    ports:
+      - "8080:8080"
+    environment:
+      - NCCL_PROFILER_OTEL_TELEMETRY_ENDPOINT=http://mosaic-otel-lgtm:4318
+      - VLLM_LOGGING_LEVEL=DEBUG
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0', '1']
+              capabilities: [gpu]
+    # Required for multi-GPU NCCL communication
+    ipc: host
+    command: ["vllm serve Qwen/Qwen3-8B --port 8080 --tensor-parallel-size 2 --gpu-memory-utilization 0.8 --disable-custom-all-reduce --enforce-eager"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s  # 5 minutes for model download and loading
+    stop_grace_period: 30s
+    restart: unless-stopped
+    depends_on:
+      - otel-lgtm
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    # Connect to the same network as the OTEL stack
+    networks:
+      - nccl-profiler

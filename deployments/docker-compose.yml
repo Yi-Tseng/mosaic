@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+services:
+  otel-lgtm:
+    image: grafana/otel-lgtm
+    container_name: mosaic-otel-lgtm
+    ports:
+      - "3000:3000"   # Grafana UI
+      - "3100:3100"   # Loki API
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics endpoint (for debugging)
+      - "9090:9090"   # Prometheus web UI
+    volumes:
+      # Dashboard provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+      - ./dashboards/dashboards.yml:/otel-lgtm/grafana/conf/provisioning/dashboards/dashboards.yml
+      # Custom configurations - correct paths for grafana/otel-lgtm image
+      - ./otel-collector-config.yaml:/otel-lgtm/otelcol-config.yaml
+      - ./prometheus.yaml:/otel-lgtm/prometheus.yaml
+      - ./loki-config.yaml:/otel-lgtm/loki-config.yaml
+      - ./grafana.ini:/etc/grafana/grafana.ini
+      - ./recording-rules.yaml:/otel-lgtm/recording-rules.yaml
+      - ./file_sd_configs/:/otel-lgtm/file_sd_configs/
+    environment:
+      # Enable debug logging if needed (uncomment for troubleshooting)
+      # - OTEL_LOG_LEVEL=debug
+      # Grafana settings
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=1s
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    networks:
+      - nccl-profiler
+    restart: unless-stopped
+
+  pipeline-analyzer:
+    # Uncommit it to build the image locally
+    # build:
+    #   context: pipeline-analyzer
+    #   dockerfile: Dockerfile
+    image: openmosaic/pipeline-analyzer:latest
+    container_name: mosaic-pipeline-analyzer
+    environment:
+      - METRICS_ENDPOINT=http://otel-lgtm:8889/metrics
+      - PORT=5000
+    depends_on:
+      - otel-lgtm
+    networks:
+      - nccl-profiler
+    restart: unless-stopped
+
+networks:
+  nccl-profiler:
+    driver: bridge

@@ -1,0 +1,176 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+name: NCCL Profiler Plugin
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NCCL_TAG: "2.29.2-1"
+  OTEL_CPP_VERSION: "1.25.0"
+  CUDA_VERSION: "12.9.1" # Based on output from `nvcc --version` on vllm/vllm-openai:v0.13.0
+  LCOV_VERSION: "2.4"
+jobs:
+  check-paths:
+    name: Check paths
+    runs-on: ubuntu-latest
+    permissions: read-all
+    outputs:
+      nccl-profiler: ${{ steps.paths.outputs.nccl-profiler }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: paths
+        with:
+          filters: |
+            nccl-profiler:
+              - 'profiler/**/*.cc'
+              - 'profiler/**/*.h'
+              - 'profiler/**/*.hpp'
+              - 'profiler/**/*.c'
+              - 'profiler/**/CMakeLists.txt'
+              - '.github/workflows/nccl-profiler-plugin.yml'
+  build-and-test:
+    name: Build and Test Profiler Plugin
+    needs: check-paths
+    if: github.event_name == 'workflow_dispatch' || needs.check-paths.outputs.nccl-profiler == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: profiler
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libssl-dev \
+            libgrpc++-dev \
+            protobuf-compiler-grpc \
+            libprotobuf-dev \
+            cmake \
+            build-essential \
+            git \
+            libcurl4-openssl-dev \
+            libgtest-dev \
+            libgmock-dev \
+            pkg-config \
+            clang-format
+
+      - name: Install lcov
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            libcapture-tiny-perl \
+            libdatetime-perl \
+            libjson-perl \
+            libperlio-gzip-perl \
+            libtimedate-perl
+          cd /tmp
+          git clone --branch v${{ env.LCOV_VERSION }} https://github.com/linux-test-project/lcov
+          cd /tmp/lcov
+          sudo make install
+
+      - name: Check code style
+        uses: jidicula/clang-format-action@v4.16.0
+        with:
+          clang-format-version: '21'
+          check-path: '.'
+
+      - name: Cache OpenTelemetry C++ SDK
+        id: cache-otel
+        uses: actions/cache@v4
+        with:
+          path: /tmp/opentelemetry-build
+          key: opentelemetry-build-v${{ env.OTEL_CPP_VERSION }}-${{ runner.os }}
+          restore-keys: |
+            opentelemetry-build-v${{ env.OTEL_CPP_VERSION }}-
+
+      - name: Build OpenTelemetry C++ SDK
+        if: steps.cache-otel.outputs.cache-hit != 'true'
+        run: |
+          cd /tmp
+          git clone --branch v${{ env.OTEL_CPP_VERSION }} --depth 1 https://github.com/open-telemetry/opentelemetry-cpp.git
+          cd opentelemetry-cpp
+          mkdir build && cd build
+          cmake \
+            -DCMAKE_INSTALL_PREFIX=/tmp/opentelemetry-build \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DBUILD_SHARED_LIBS=ON \
+            -DWITH_OTLP_GRPC=ON \
+            -DWITH_OTLP_HTTP=ON \
+            -DBUILD_TESTING=OFF \
+            -DOPENTELEMETRY_INSTALL=ON \
+            -DWITH_PROMETHEUS=ON \
+            -DWITH_BENCHMARK=OFF \
+            ..
+          cmake --build . --parallel $(nproc)
+          cmake --install .
+
+      - name: Install OpenTelemetry C++ SDK
+        run: |
+          sudo cp -r /tmp/opentelemetry-build/include/* /usr/local/include/
+          sudo cp -r /tmp/opentelemetry-build/lib/* /usr/local/lib/
+          sudo ldconfig
+
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.30
+        id: cuda-toolkit
+        with:
+          cuda: '${{ env.CUDA_VERSION }}'
+          method: 'network'
+          sub-packages: '["nvcc", "cudart-dev"]'
+
+      - name: Cache NCCL
+        id: cache-nccl
+        uses: actions/cache@v4
+        with:
+          path: /tmp/nccl
+          key: nccl-v${{ env.NCCL_TAG }}-cuda${{ steps.cuda-toolkit.outputs.cuda }}-${{ runner.os }}
+          restore-keys: |
+            nccl-v${{ env.NCCL_TAG }}-
+
+      - name: Clone and build NCCL
+        if: steps.cache-nccl.outputs.cache-hit != 'true'
+        run: |
+          cd /tmp
+          git clone --branch v${{ env.NCCL_TAG }} --depth 1 https://github.com/NVIDIA/nccl.git
+          cd nccl
+          make -j$(nproc) src.build NVCC_GENCODE="-gencode=arch=compute_80,code=sm_80"
+
+      - name: Build plugin
+        env:
+          NCCL_PATH: /tmp/nccl
+        run: |
+          make build
+
+      - name: Build and run unit tests with coverage
+        env:
+          NCCL_PATH: /tmp/nccl
+        run: |
+          make coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: tests/build/coverage.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            profiler/build/libnccl-profiler-otel.so
+          retention-days: 7

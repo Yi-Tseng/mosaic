@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+name: Pipeline Analyzer Container
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+  workflow_dispatch:
+
+jobs:
+  check-paths:
+    name: Check paths
+    runs-on: ubuntu-latest
+    permissions: read-all
+    outputs:
+      pipeline-analyzer-container: ${{ steps.paths.outputs.pipeline-analyzer-container }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: paths
+        with:
+          filters: |
+            pipeline-analyzer-container:
+              - deployments/pipeline-analyzer/Dockerfile.pipeline-analyzer
+              - deployments/pipeline-analyzer/analyze_pipelines.py
+              - deployments/pipeline-analyzer/pipeline_server.py
+              - deployments/pipeline-analyzer/requirements-pipeline.txt
+              - .github/workflows/pipeline-analyzer-container.yml
+              - .github/trivy.yaml
+
+  build-container:
+    name: Build and Scan Pipeline Analyzer Container
+    needs: check-paths
+    if: github.event_name == 'workflow_dispatch' || needs.check-paths.outputs.pipeline-analyzer-container == 'true'
+    runs-on: ubuntu-latest-m
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get short SHA
+        id: short-sha
+        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: deployments/pipeline-analyzer
+          file: deployments/pipeline-analyzer/Dockerfile
+          # Push the image to the registry if the branch is main or a tag is pushed.
+          push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+          # Load image to local Docker so Trivy can scan it when not pushing.
+          load: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+          tags: |
+            ${{ vars.DOCKERHUB_REPO || 'local' }}/pipeline-analyzer:${{ steps.short-sha.outputs.sha }}
+            ${{ (github.ref == 'refs/heads/main' && format('{0}/pipeline-analyzer:latest', vars.DOCKERHUB_REPO || 'local')) || '' }}
+            ${{ (startsWith(github.ref, 'refs/tags/') && format('{0}/pipeline-analyzer:{1}', vars.DOCKERHUB_REPO || 'local', github.ref_name)) || '' }}
+          build-args: |
+            GIT_HASH=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        if: (github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch') || !contains(github.event.pull_request.labels.*.name, 'skip-trivy')
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ vars.DOCKERHUB_REPO || 'local' }}/pipeline-analyzer:${{ steps.short-sha.outputs.sha }}
+          trivy-config: .github/trivy.yaml
+          trivyignores: .github/.trivyignore

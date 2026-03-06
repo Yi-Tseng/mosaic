@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directories:
+      - "docs"
+      - "deployments/gpu_pcie_exporter"
+      - "deployments/pipeline-analyzer"
+    schedule:
+      interval: "weekly"

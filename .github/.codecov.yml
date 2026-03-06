@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+coverage:
+  status:
+    project:
+      default:
+        target: 80%    # the required coverage value
+        threshold: 5%  # the leniency in hitting the target
+ignore:
+  - "profiler/tests"

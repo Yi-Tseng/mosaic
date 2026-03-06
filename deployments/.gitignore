@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Prometheus service discovery configuration
+file_sd_configs/*.yaml

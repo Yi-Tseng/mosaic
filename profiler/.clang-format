@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 120
+BreakBeforeBraces: Allman
+UseTab: Never
+AllowShortFunctionsOnASingleLine: Empty
+AlignOperands: Align
+AlignArrayOfStructures: Left
+AccessModifierOffset: -4
+AlignTrailingComments: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: Consecutive
+IndentCaseBlocks: false
+AlignEscapedNewlines: Right

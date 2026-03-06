@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# MkDocs core
+mkdocs>=1.6.0
+
+# Theme
+mkdocs-material>=9.7.0
+
+# Plugins
+mkdocs-spellcheck>=1.2.0
+mkdocs-nav-weight>=0.3.0
+
+# Spell check
+symspellpy>=6.9.0
+
+# License checking
+reuse>=6.2.0

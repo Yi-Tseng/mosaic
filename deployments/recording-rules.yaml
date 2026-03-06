@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+groups:
+  - name: gpu_pair_metrics
+    interval: 5s
+    rules:
+    - record: mosaic_gpu_rank_mapping
+      expr: |
+        sum by (communicator, rank, hostname, gpu_pci_bus_id, gpu_uuid) (
+          label_replace(
+            nccl_profiler_transfer_time_microseconds_sum,
+            "rank", "$1", "source_rank", "(.*)"
+          )
+        ) > bool 0
+    - record: mosaic_gpu_pair_bw
+      expr: |
+        avg by (source_hostname, source_pci_bus_id, dest_hostname, dest_pci_bus_id)
+          (
+            (
+              increase(nccl_profiler_rank_rate_MB_per_second_sum[30s]) / increase(nccl_profiler_rank_rate_MB_per_second_count[30s])
+                * on (communicator, source_rank)
+                  group_left(source_hostname, source_pci_bus_id)
+                  label_replace(
+                    label_replace(
+                      label_replace(
+                        mosaic_gpu_rank_mapping,
+                        "source_rank", "$1", "rank", "(.*)"
+                      ),
+                      "source_hostname", "$1", "hostname", "(.*)"
+                    ),
+                    "source_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+                  )
+            )
+            * on (communicator, dest_rank)
+              group_left(dest_hostname, dest_pci_bus_id)
+              label_replace(
+                label_replace(
+                  label_replace(
+                    mosaic_gpu_rank_mapping,
+                    "dest_rank", "$1", "rank", "(.*)"
+                  ),
+                  "dest_hostname", "$1", "hostname", "(.*)"
+                ),
+                "dest_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+              ) < +Inf
+          )
+    - record: mosaic_gpu_pair_latency
+      expr: |
+        avg by (source_hostname, source_pci_bus_id, dest_hostname, dest_pci_bus_id)
+          (
+            (
+              increase(nccl_profiler_rank_latency_microseconds_sum[30s]) / increase(nccl_profiler_rank_latency_microseconds_count[30s])
+                * on (communicator, source_rank)
+                  group_left(source_hostname, source_pci_bus_id)
+                  label_replace(
+                    label_replace(
+                      label_replace(
+                        mosaic_gpu_rank_mapping,
+                        "source_rank", "$1", "rank", "(.*)"
+                      ),
+                      "source_hostname", "$1", "hostname", "(.*)"
+                    ),
+                    "source_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+                  )
+            )
+            * on (communicator, dest_rank)
+              group_left(dest_hostname, dest_pci_bus_id)
+              label_replace(
+                label_replace(
+                  label_replace(
+                    mosaic_gpu_rank_mapping,
+                    "dest_rank", "$1", "rank", "(.*)"
+                  ),
+                  "dest_hostname", "$1", "hostname", "(.*)"
+                ),
+                "dest_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+              ) < +Inf
+          )
+    - record: mosaic_gpu_transfer_time
+      expr: |
+        avg by (source_hostname, source_pci_bus_id, dest_hostname, dest_pci_bus_id)
+          (
+            (
+              increase(nccl_profiler_transfer_time_microseconds_sum[30s]) / increase(nccl_profiler_transfer_time_microseconds_count[30s])
+                * on (communicator, source_rank)
+                  group_left(source_hostname, source_pci_bus_id)
+                  label_replace(
+                    label_replace(
+                      label_replace(
+                        mosaic_gpu_rank_mapping,
+                        "source_rank", "$1", "rank", "(.*)"
+                      ),
+                      "source_hostname", "$1", "hostname", "(.*)"
+                    ),
+                    "source_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+                  )
+            )
+            * on (communicator, dest_rank)
+              group_left(dest_hostname, dest_pci_bus_id)
+              label_replace(
+                label_replace(
+                  label_replace(
+                    mosaic_gpu_rank_mapping,
+                    "dest_rank", "$1", "rank", "(.*)"
+                  ),
+                  "dest_hostname", "$1", "hostname", "(.*)"
+                ),
+                "dest_pci_bus_id", "$1", "gpu_pci_bus_id", "(.*)"
+              ) < +Inf
+          )
+    - record: mosaic_cpu_util
+      expr: |
+        sum(rate(node_cpu_seconds_total{mode!="idle"}[1m])) by (cpu, host)
+        / sum(rate(node_cpu_seconds_total[1m])) by (cpu, host) * 100

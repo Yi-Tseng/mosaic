@@ -1,0 +1,154 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+NOTICE
+
+This project contains or may depend on the following third-party components.
+Each component's license is identified below.
+
+=============================================================================
+Third-party C++ dependencies (profiler)
+=============================================================================
+
+1. NCCL (NVIDIA Collective Communications Library)
+   - Use: Plugin API and headers (NCCL_PATH).
+   - License: BSD 3-Clause.
+   - Source: https://github.com/NVIDIA/nccl
+
+2. NVIDIA CUDA Toolkit (optional)
+   - Use: GPU runtime and headers when building for GPU_PLATFORM=CUDA.
+   - License: NVIDIA Software License (proprietary).
+   - Not used when building for ROCm only.
+
+3. AMD ROCm / HIP (optional)
+   - Use: GPU runtime and headers when building for GPU_PLATFORM=ROCM.
+   - License: MIT (HIP runtime component).
+   - Not used when building for CUDA only.
+
+4. OpenTelemetry C++ SDK
+   - Use: Metrics export (OTLP HTTP), telemetry.
+   - License: Apache-2.0.
+   - Source: https://github.com/open-telemetry/opentelemetry-cpp
+
+5. Protocol Buffers (protobuf)
+   - Use: Linked by OpenTelemetry C++ SDK.
+   - License: BSD 3-Clause.
+   - Source: https://github.com/protocolbuffers/protobuf
+
+6. Abseil C++ (abseil-cpp)
+   - Use: Linked by Protocol Buffers and OpenTelemetry C++ SDK.
+   - License: Apache-2.0.
+   - Source: https://github.com/abseil/abseil-cpp
+
+7. libcurl
+   - Use: HTTP client for OpenTelemetry OTLP HTTP exporter.
+   - License: curl license (MIT-style).
+   - Source: https://curl.se/
+   - SPDX identifier: curl.
+
+8. Googletest (Google Test and Google Mock) [test-only]
+   - Use: Unit tests in profiler/tests.
+   - License: BSD 3-Clause.
+   - Source: https://github.com/google/googletest (e.g. release-1.12.1).
+
+=============================================================================
+Third-party Python dependencies (docs/)
+=============================================================================
+
+Used for building documentation (see docs/requirements.txt and docs/mkdocs.yml).
+
+9. MkDocs
+   - Use: Documentation site generator.
+   - License: BSD-2-Clause.
+   - Source: https://github.com/mkdocs/mkdocs
+
+10. MkDocs Material (theme)
+   - Use: Documentation theme and features.
+   - License: MIT.
+   - Source: https://github.com/squidfunk/mkdocs-material
+
+11. mkdocs-spellcheck
+    - Use: Spell-check plugin for MkDocs.
+    - License: ISC.
+    - Source: https://github.com/pawamoy/mkdocs-spellcheck
+
+12. mkdocs-nav-weight
+    - Use: Navigation ordering plugin for MkDocs.
+    - License: MIT.
+    - Source: https://pypi.org/project/mkdocs-nav-weight/
+
+13. symspellpy
+    - Use: Spelling correction (used by mkdocs-spellcheck).
+    - License: MIT.
+    - Source: https://github.com/mammothb/symspellpy
+
+14. reuse (FSFE)
+    - Use: License compliance checking (development/CI only).
+    - License: GPL-3.0-or-later.
+    - Source: https://github.com/fsfe/reuse-tool
+
+The MkDocs Material theme may pull in additional dependencies (e.g. PyMdown
+Extensions); see the theme and plugin packages for their respective licenses.
+
+=============================================================================
+Third-party Python dependencies (deployments/)
+=============================================================================
+
+15. gpu_pcie_exporter (deployments/gpu_pcie_exporter/)
+    - prometheus-client: Prometheus metrics.
+      License: Apache-2.0.
+      Source: https://github.com/prometheus/client_python
+
+16. pipeline-analyzer (deployments/pipeline-analyzer/)
+    - Flask: Web framework.
+      License: BSD-3-Clause.
+      Source: https://github.com/pallets/flask
+    - Flask-CORS: CORS support.
+      License: MIT.
+      Source: https://github.com/corydolphin/flask-cors
+    - requests: HTTP library.
+      License: Apache-2.0.
+      Source: https://github.com/psf/requests
+    - Werkzeug: WSGI utilities.
+      License: BSD-3-Clause.
+      Source: https://github.com/pallets/werkzeug
+
+=============================================================================
+Referenced container images (deployments)
+=============================================================================
+
+The docker-compose files in deployments/ reference the following third-party
+container images. These are runtime images, not code linked into this project.
+
+- grafana/otel-lgtm (deployments/docker-compose.yml)
+  Source: https://github.com/grafana/docker-otel-lgtm
+  License: Apache-2.0
+
+- prom/node-exporter (amd-gpu-monitoring, nvidia-gpu-monitoring)
+  Source: https://github.com/prometheus/node_exporter
+  License: Apache-2.0
+
+- ncabatoff/process-exporter (amd-gpu-monitoring, nvidia-gpu-monitoring)
+  Source: https://github.com/ncabatoff/process-exporter
+  License: MIT
+
+- rocm/device-metrics-exporter (amd-gpu-monitoring)
+  Source: https://github.com/ROCm/device-metrics-exporter
+  License: Apache-2.0
+
+- nvidia/dcgm-exporter (nvidia-gpu-monitoring)
+  Source: https://github.com/NVIDIA/dcgm-exporter
+  License: Apache-2.0
+
+=============================================================================
+Standard / system components
+=============================================================================
+
+- C++ standard library, pthreads, and system headers (e.g. unistd.h, stdint.h)
+  are used under the terms of the platform (e.g. glibc, compiler runtime)
+  and are not listed above as third-party libraries.
+
+=============================================================================
+
+For the full license of this project, see the LICENSE file in the root of
+this repository.

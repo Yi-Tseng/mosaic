@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+# Prometheus Configuration
+# Optimized for low-latency scraping
+
+global:
+  scrape_interval: 1s      # Scrape every 1 second (default is 15s)
+  evaluation_interval: 1s  # Evaluate rules every 1 second
+  scrape_timeout: 1s       # Timeout for scrapes
+
+scrape_configs:
+  # Scrape the OpenTelemetry Collector's Prometheus exporter
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['localhost:8889']
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+  # Scrape Prometheus itself (for monitoring)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+
+  # Scrape Pipeline Analyzer
+  - job_name: 'pipeline-analyzer'
+    static_configs:
+      # Note: use the *container* port here. The host port mapping in docker-compose.yml
+      # only affects access from your machine (e.g. http://localhost:55001), not scraping
+      # between containers on the docker network.
+      - targets: ['pipeline-analyzer:5000']
+    metrics_path: '/metrics/pipelines'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Scrape Rank Mapping
+  - job_name: 'rank-mapping'
+    static_configs:
+      - targets: ['pipeline-analyzer:5000']
+    metrics_path: '/metrics/rank_mapping'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # File Service Discovery to find additional scrape sources
+  - job_name: 'file-service-discovery'
+    file_sd_configs:
+    - files:
+      - '/otel-lgtm/file_sd_configs/*.yaml'
+      refresh_interval: 2m
+
+rule_files:
+  - "recording-rules.yaml"

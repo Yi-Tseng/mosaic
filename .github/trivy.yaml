@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Trivy configuration for container image scanning in CI.
+# Used by .github/workflows/*-container.yml via trivy-config input.
+
+format: table
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL
+
+scan:
+  scanners:
+    - vuln
+    - secret
+
+vulnerability:
+  ignore-unfixed: true

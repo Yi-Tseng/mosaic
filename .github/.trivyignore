@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Ignore until Ray upgrades jackson-core to >=2.18.6.
+# https://github.com/ray-project/ray/blob/master/java/dependencies.bzl
+GHSA-72hv-8253-57qq
+
+# Ignore until vLLM upgrades xgrammar to >= 0.1.32
+# https://github.com/vllm-project/vllm/blob/main/requirements/common.txt
+CVE-2026-25048

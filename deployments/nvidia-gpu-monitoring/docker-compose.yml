@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+services:
+  nvidia-device-exporter:
+    image: nvidia/dcgm-exporter:4.5.1-4.8.0-distroless
+    container_name: mosaic-nvidia-device-exporter
+    profiles:
+      - nvidia-device-exporter
+    ports:
+      - "9400:9400"
+    cap_add:
+      - SYS_ADMIN
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mosaic-node-exporter
+    profiles:
+      - node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|run|snapd|var/snap|snap)($|/)'
+    restart: unless-stopped
+
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    container_name: mosaic-process-exporter
+    command:
+      - -config.path=/etc/process-exporter/config.yml
+      - -procfs=/host/proc
+    volumes:
+      - /proc:/host/proc:ro
+      - ./process-exporter.config.yml:/etc/process-exporter/config.yml:ro
+    profiles:
+      - process-exporter
+    ports:
+      - "9256:9256"
+    restart: unless-stopped

@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2025 Delos Data Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Build artifacts
+build/
+*.so
+*.so.*
+compile_commands.json
+
+# Local configuration (user-specific)
+config.local
+config.ray
+.vscode/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Cache directories
+.cache/
+
+# Backup files
+*~
+*.bak
+*.orig
+
+# OpenTelemetry SDK
+opentelemetry-build/
+
+# Temporary NFS files
+.nfs*
