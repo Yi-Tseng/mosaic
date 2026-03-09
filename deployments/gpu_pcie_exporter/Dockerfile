@@ -3,6 +3,9 @@
 
 FROM python:3.14-alpine
 
+# FIXME: Remove this once we have a fix for the zlib version issue in the python:3.14-alpine image
+RUN apk add --no-cache zlib=1.3.2-r0
+
 # Set working directory
 WORKDIR /app
 

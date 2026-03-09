@@ -17,6 +17,7 @@ on:
       - labeled
       - unlabeled
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   check-paths:
